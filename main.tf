@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -159,7 +159,7 @@ locals {
 
 module "billing-alert" {
   for_each              = local.billing_alert == null ? {} : { 1 = 1 }
-  source                = "git::https://github.com/siticom/cloud-foundation-fabric//modules/billing-budget?ref=v19.0.0"
+  source                = "git::https://github.com/siticom/cloud-foundation-fabric//modules/billing-budget?ref=v21.0.0"
   billing_account       = local.billing_account_id
   name                  = "${module.project.project_id} budget"
   amount                = local.billing_alert.amount
@@ -174,7 +174,7 @@ module "billing-alert" {
 }
 
 module "private-dns" {
-  source          = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v19.0.0"
+  source          = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each        = toset(var.private_dns_zones)
   project_id      = module.project.project_id
   type            = "private"
@@ -184,7 +184,7 @@ module "private-dns" {
 }
 
 module "public-dns" {
-  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v19.0.0"
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = toset(var.public_dns_zones)
   project_id = module.project.project_id
   type       = "public"
@@ -204,7 +204,7 @@ resource "google_dns_record_set" "public-delegation" {
 }
 
 module "public-dns-acme" {
-  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v19.0.0"
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = toset(var.public_dns_zones)
   project_id = module.project.project_id
   type       = "public"
@@ -224,7 +224,7 @@ resource "google_dns_record_set" "public-acme-delegation" {
 }
 
 module "private-dns-acme" {
-  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v19.0.0"
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = var.acme_dns_cnames
   project_id = module.project.project_id
   type       = "public"
@@ -255,9 +255,10 @@ resource "google_dns_record_set" "private-acme-cnames" {
 }
 
 module "project" {
-  source                     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/project?ref=v19.0.0"
+  source                     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/project?ref=v21.0.0"
   billing_account            = local.billing_account_id
   name                       = var.project_id
+  descriptive_name           = var.descriptive_name
   prefix                     = var.prefix
   contacts                   = { for c in local.essential_contacts : c => ["ALL"] }
   iam                        = local.iam
@@ -286,7 +287,7 @@ module "project" {
 }
 
 module "service-accounts" {
-  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/iam-service-account?ref=v19.0.0"
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/iam-service-account?ref=v21.0.0"
   for_each   = var.service_accounts
   name       = each.key
   project_id = module.project.project_id

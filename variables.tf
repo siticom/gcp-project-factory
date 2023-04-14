@@ -1,5 +1,5 @@
 /**
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,12 @@ variable "defaults" {
     vpc_host_project             = string
   })
   default = null
+}
+
+variable "descriptive_name" {
+  description = "Name of the project name. Used for project name instead of `name` variable."
+  type        = string
+  default     = null
 }
 
 variable "private_dns_zones" {
@@ -126,19 +132,6 @@ variable "org_policies" {
   type = map(object({
     inherit_from_parent = optional(bool) # for list policies only.
     reset               = optional(bool)
-
-    # default (unconditional) values
-    allow = optional(object({
-      all    = optional(bool)
-      values = optional(list(string))
-    }))
-    deny = optional(object({
-      all    = optional(bool)
-      values = optional(list(string))
-    }))
-    enforce = optional(bool, true) # for boolean policies only.
-
-    # conditional values
     rules = optional(list(object({
       allow = optional(object({
         all    = optional(bool)
@@ -148,13 +141,13 @@ variable "org_policies" {
         all    = optional(bool)
         values = optional(list(string))
       }))
-      enforce = optional(bool, true) # for boolean policies only.
-      condition = object({
+      enforce = optional(bool) # for boolean policies only.
+      condition = optional(object({
         description = optional(string)
         expression  = optional(string)
         location    = optional(string)
         title       = optional(string)
-      })
+      }), {})
     })), [])
   }))
   default  = {}
