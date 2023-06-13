@@ -263,6 +263,7 @@ module "project" {
   contacts                   = { for c in local.essential_contacts : c => ["ALL"] }
   iam                        = local.iam
   iam_additive               = local.iam_additive
+  default_service_account    = "deprivilege"
   labels                     = local.labels
   org_policies               = try(var.org_policies, {})
   parent                     = var.folder_id
