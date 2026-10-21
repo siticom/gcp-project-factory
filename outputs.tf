@@ -24,6 +24,8 @@ output "project" {
     google_compute_subnetwork_iam_member.default,
     module.private-dns,
     module.public-dns,
+    module.parallel-private-dns,
+    module.parallel-public-dns
   ]
 }
 
@@ -34,5 +36,7 @@ output "project_id" {
     google_compute_subnetwork_iam_member.default,
     module.private-dns,
     module.public-dns,
+    module.parallel-private-dns,
+    module.parallel-public-dns
   ]
 }
