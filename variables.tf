@@ -46,6 +46,8 @@ variable "defaults" {
     })
     environment_private_dns_zone = string
     environment_public_dns_zone  = string
+    environment_parallel_private_dns_zone = string
+    environment_parallel_public_dns_zone  = string
     essential_contacts           = list(string)
     labels                       = map(string)
     notification_channels        = list(string)

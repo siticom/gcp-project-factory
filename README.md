@@ -29,6 +29,7 @@ This project factory is derived from Google's [cloud-foundation-fabric](https://
 Changes are:
 - support for private and public DNS zones
   - allows setting CNAMEs for ACME certificate requests
+- support for a parallel dns environment
 
 ## Example
 

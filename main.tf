@@ -148,8 +148,12 @@ locals {
     for binding in local._vpc_subnet_bindings :
     "${binding.subnet}:${binding.member}" => binding
   }
-  vpc_host_project_public_dns_zone       = trimsuffix(replace(var.defaults.environment_public_dns_zone, ".", "-"), "-")
-  vpc_host_project_private_acme_dns_zone = format("%s-acme", trimsuffix(replace(var.defaults.environment_private_dns_zone, ".", "-"), "-"))
+  vpc_host_project_public_dns_zone          = trimsuffix(replace(var.defaults.environment_public_dns_zone, ".", "-"), "-")
+  vpc_host_project_parallel_public_dns_zone = trimsuffix(replace(var.defaults.environment_parallel_public_dns_zone, ".", "-"), "-")
+
+  vpc_host_project_private_acme_dns_zone          = format("%s-acme", trimsuffix(replace(var.defaults.environment_private_dns_zone, ".", "-"), "-"))
+  vpc_host_project_parallel_private_acme_dns_zone = format("%s-acme", trimsuffix(replace(var.defaults.environment_parallel_private_dns_zone, ".", "-"), "-"))
+
   acme_dns_cnames = flatten([
     for zone, names in var.acme_dns_cnames : [
       for name in names : { "zone" = zone, "cname" = name }
@@ -183,6 +187,16 @@ module "private-dns" {
   client_networks = [var.defaults.shared_vpc_self_link]
 }
 
+module "parallel-private-dns" {
+  source          = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
+  for_each        = toset(var.private_dns_zones)
+  project_id      = module.project.project_id
+  type            = "private"
+  name            = trimsuffix(replace(format("%s.%s", each.value, var.defaults.environment_parallel_private_dns_zone), ".", "-"), "-")
+  domain          = "${each.value}.${var.defaults.environment_parallel_private_dns_zone}"
+  client_networks = [var.defaults.shared_vpc_self_link]
+}
+
 module "public-dns" {
   source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = toset(var.public_dns_zones)
@@ -190,6 +204,15 @@ module "public-dns" {
   type       = "public"
   name       = trimsuffix(replace(format("%s.%s", each.value, var.defaults.environment_public_dns_zone), ".", "-"), "-")
   domain     = "${each.value}.${var.defaults.environment_public_dns_zone}"
+}
+
+module "parallel-public-dns" {
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
+  for_each   = toset(var.public_dns_zones)
+  project_id = module.project.project_id
+  type       = "public"
+  name       = trimsuffix(replace(format("%s.%s", each.value, var.defaults.environment_parallel_public_dns_zone), ".", "-"), "-")
+  domain     = "${each.value}.${var.defaults.environment_parallel_public_dns_zone}"
 }
 
 resource "google_dns_record_set" "public-delegation" {
@@ -203,6 +226,17 @@ resource "google_dns_record_set" "public-delegation" {
   rrdatas = module.public-dns[each.key].name_servers
 }
 
+resource "google_dns_record_set" "parallel-public-delegation" {
+  for_each     = toset(var.public_dns_zones)
+  project      = var.defaults.vpc_host_project
+  managed_zone = local.vpc_host_project_parallel_public_dns_zone
+  name         = module.parallel-public-dns[each.key].domain
+  type         = "NS"
+  ttl          = 300
+
+  rrdatas = module.parallel-public-dns[each.key].name_servers
+}
+
 module "public-dns-acme" {
   source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = toset(var.public_dns_zones)
@@ -210,6 +244,15 @@ module "public-dns-acme" {
   type       = "public"
   name       = "${module.public-dns[each.key].name}-acme"
   domain     = "${each.key}.acme.${var.defaults.environment_public_dns_zone}"
+}
+
+module "parallel-public-dns-acme" {
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
+  for_each   = toset(var.public_dns_zones)
+  project_id = module.project.project_id
+  type       = "public"
+  name       = "${module.parallel-public-dns[each.key].name}-acme"
+  domain     = "${each.key}.acme.${var.defaults.environment_parallel_public_dns_zone}"
 }
 
 resource "google_dns_record_set" "public-acme-delegation" {
@@ -223,6 +266,17 @@ resource "google_dns_record_set" "public-acme-delegation" {
   rrdatas = module.public-dns-acme[each.key].name_servers
 }
 
+resource "google_dns_record_set" "parallel-public-acme-delegation" {
+  for_each     = toset(var.public_dns_zones)
+  project      = var.defaults.vpc_host_project
+  managed_zone = local.vpc_host_project_parallel_public_dns_zone
+  name         = module.parallel-public-dns-acme[each.key].domain
+  type         = "NS"
+  ttl          = 300
+
+  rrdatas = module.parallel-public-dns-acme[each.key].name_servers
+}
+
 module "private-dns-acme" {
   source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
   for_each   = var.acme_dns_cnames
@@ -230,6 +284,15 @@ module "private-dns-acme" {
   type       = "public"
   name       = "${module.private-dns[each.key].name}-acme"
   domain     = "${each.key}.acme.${var.defaults.environment_private_dns_zone}"
+}
+
+module "parallel-private-dns-acme" {
+  source     = "git::https://github.com/siticom/cloud-foundation-fabric//modules/dns?ref=v21.0.0"
+  for_each   = var.acme_dns_cnames
+  project_id = module.project.project_id
+  type       = "public"
+  name       = "${module.parallel-private-dns[each.key].name}-acme"
+  domain     = "${each.key}.acme.${var.defaults.environment_parallel_private_dns_zone}"
 }
 
 resource "google_dns_record_set" "private-acme-delegation" {
@@ -243,6 +306,17 @@ resource "google_dns_record_set" "private-acme-delegation" {
   rrdatas = module.private-dns-acme[each.key].name_servers
 }
 
+resource "google_dns_record_set" "parallel-private-acme-delegation" {
+  for_each     = var.acme_dns_cnames
+  project      = var.defaults.vpc_host_project
+  managed_zone = local.vpc_host_project_parallel_private_acme_dns_zone
+  name         = module.parallel-private-dns-acme[each.key].domain
+  type         = "NS"
+  ttl          = 300
+
+  rrdatas = module.parallel-private-dns-acme[each.key].name_servers
+}
+
 resource "google_dns_record_set" "private-acme-cnames" {
   for_each     = { for name in local.acme_dns_cnames : "${name.cname}.${name.zone}" => name }
   project      = var.defaults.vpc_host_project
@@ -252,6 +326,17 @@ resource "google_dns_record_set" "private-acme-cnames" {
   ttl          = 10
 
   rrdatas = ["${each.value.cname}.${module.private-dns-acme[each.value.zone].domain}"]
+}
+
+resource "google_dns_record_set" "parallel-private-acme-cnames" {
+  for_each     = { for name in local.acme_dns_cnames : "${name.cname}.${name.zone}" => name }
+  project      = var.defaults.vpc_host_project
+  managed_zone = local.vpc_host_project_parallel_private_acme_dns_zone
+  name         = "${each.value.cname}.${module.parallel-private-dns[each.value.zone].domain}"
+  type         = "CNAME"
+  ttl          = 10
+
+  rrdatas = ["${each.value.cname}.${module.parallel-private-dns-acme[each.value.zone].domain}"]
 }
 
 module "project" {
